@@ -26,7 +26,7 @@ fun main(args: Array<String>): Unit = runBlocking {
         .mergeComparingWith(existing, Comparator.comparing { it.second.date })
         .groupBy { it.second.date }
         .flatMap { gr -> gr.collectList().flatMap { combineRecords(it) } }
-        .doOnNext { GarminConnector.save(it) }
+        .flatMap { record -> mono { GarminConnector.save(record) } }
         .awaitLast()
 }
 

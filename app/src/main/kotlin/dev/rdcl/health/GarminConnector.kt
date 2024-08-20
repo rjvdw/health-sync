@@ -1,6 +1,7 @@
 package dev.rdcl.health
 
 import dev.rdcl.health.garmin.GetResponse
+import dev.rdcl.health.garmin.SaveRequest
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
@@ -9,8 +10,11 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.math.BigDecimal
@@ -32,7 +36,7 @@ class GarminConnector {
             defaultRequest {
                 headers {
                     append("DI-Backend", "connectapi.garmin.com")
-                    append(HttpHeaders.Authorization, "Bearer ${getAccessToken()}")
+                    append("Authorization", "Bearer ${getAccessToken()}")
                 }
             }
         }
@@ -41,28 +45,37 @@ class GarminConnector {
             val paramStart = start ?: MIN_DATE
             val paramEnd = end ?: MAX_DATE
 
-            return client.get("$BASE_URL/weight/range/$paramStart/$paramEnd?includeAll=true") {
-                headers { append(HttpHeaders.Accept, ContentType.Application.Json.toString()) }
-            }
-                .body<GetResponse>()
-                .dailyWeightSummaries
-                .filter { it.numOfWeightEntries > 0 }
-                .map {
-                    HealthRecord(
-                        LocalDate.parse(it.summaryDate),
-                        parseWeight(it.allWeightMetrics[0].weight)
-                    )
+            return withContext(Dispatchers.IO) {
+                client.get("$BASE_URL/weight/range/$paramStart/$paramEnd?includeAll=true") {
+                    headers { append("Accept", "application/json") }
                 }
+                    .body<GetResponse>()
+                    .dailyWeightSummaries
+                    .filter { it.numOfWeightEntries > 0 }
+                    .map {
+                        HealthRecord(
+                            LocalDate.parse(it.summaryDate),
+                            parseWeight(it.allWeightMetrics[0].weight)
+                        )
+                    }
+            }
         }
 
-        fun save(record: HealthRecord) {
-            println(record) // TODO
+        suspend fun save(record: HealthRecord) {
+            println("Saving record: $record")
+            val requestBody = SaveRequest(record.date, record.weight!!)
+            withContext(Dispatchers.IO) {
+                client.post("$BASE_URL/user-weight") {
+                    contentType(ContentType.Application.Json.withCharset(Charsets.UTF_8))
+                    setBody(JSON.encodeToString(requestBody))
+                }
+            }
         }
     }
 }
 
 private fun getAccessToken(): String {
-    val garthOauth2Path = getEnv("GARTH_OAUTH2_PATH") ?: ".garth/session/oauth2_token.jso"
+    val garthOauth2Path = getEnv("GARTH_OAUTH2_PATH") ?: ".garth/session/oauth2_token.json"
     val data = File(garthOauth2Path).readText()
     val token = JSON.decodeFromString<Oauth2Token>(data)
 
