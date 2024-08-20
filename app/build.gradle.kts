@@ -40,3 +40,15 @@ java {
 application {
     mainClass = "dev.rdcl.health.SyncKt"
 }
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "dev.rdcl.health.SyncKt"
+    }
+
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+
+    from({
+        configurations.runtimeClasspath.get().map { if (it.isDirectory) it else zipTree(it) }
+    })
+}
