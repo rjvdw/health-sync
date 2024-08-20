@@ -27,12 +27,12 @@ class DbConnector {
                     it
                         .createStatement(
                             """
-                        select date,
-                               (data ->> 'weight')::numeric as weight
-                        from health
-                        where date between $1 and $2
-                        order by date
-                        """.trimIndent()
+                            select date,
+                                   (data ->> 'weight')::numeric as weight
+                            from health
+                            where date between $1 and $2
+                            order by date
+                            """.trimIndent()
                         )
                         .bind(0, start ?: LocalDate.MIN)
                         .bind(1, end ?: LocalDate.MAX)
