@@ -27,6 +27,7 @@ fun main(args: Array<String>): Unit = runBlocking {
         .groupBy { it.second.date }
         .flatMap { gr -> gr.collectList().flatMap { combineRecords(it) } }
         .flatMap { record -> mono { GarminConnector.save(record) } }
+        .defaultIfEmpty(Unit)
         .awaitLast()
 }
 
