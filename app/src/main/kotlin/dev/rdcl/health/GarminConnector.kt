@@ -52,6 +52,7 @@ class GarminConnector {
                     .body<GetResponse>()
                     .dailyWeightSummaries
                     .filter { it.numOfWeightEntries > 0 }
+                    .sortedBy { it.summaryDate }
                     .map {
                         HealthRecord(
                             LocalDate.parse(it.summaryDate),
