@@ -41,6 +41,13 @@ class GarminConnector {
             }
         }
 
+        /**
+         * Retrieve records between the specified dates. The Garmin Connect API returns these records in reverse order.
+         *
+         * @param start The start date. Defaults to 1900-01-01.
+         * @param end   The end date. Defaults to 3000-01-01.
+         * @return A stream of [HealthRecord].
+         */
         suspend fun getBetween(start: LocalDate?, end: LocalDate?): List<HealthRecord> {
             val paramStart = start ?: MIN_DATE
             val paramEnd = end ?: MAX_DATE
@@ -52,7 +59,6 @@ class GarminConnector {
                     .body<GetResponse>()
                     .dailyWeightSummaries
                     .filter { it.numOfWeightEntries > 0 }
-                    .sortedBy { it.summaryDate }
                     .map {
                         HealthRecord(
                             LocalDate.parse(it.summaryDate),

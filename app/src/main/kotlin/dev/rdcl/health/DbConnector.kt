@@ -21,6 +21,13 @@ class DbConnector {
                 .build()
         )
 
+        /**
+         * Retrieve records between the specified dates in reverse order.
+         *
+         * @param start The start date. Defaults to [LocalDate.MIN].
+         * @param end   The end date. Defaults to [LocalDate.MAX].
+         * @return A stream of [HealthRecord].
+         */
         fun getBetween(start: LocalDate?, end: LocalDate?): Flux<HealthRecord> =
             conn()
                 .flatMapMany {
@@ -31,7 +38,7 @@ class DbConnector {
                                    (data ->> 'weight')::numeric as weight
                             from health
                             where date between $1 and $2
-                            order by date
+                            order by date desc
                             """.trimIndent()
                         )
                         .bind(0, start ?: LocalDate.MIN)

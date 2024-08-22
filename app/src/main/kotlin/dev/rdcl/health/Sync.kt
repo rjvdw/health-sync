@@ -24,6 +24,7 @@ fun main(args: Array<String>): Unit = runBlocking {
                 .flatMapMany { Flux.fromIterable(it) }
                 .map { Item(it.date, null, it) },
             Comparator.comparing(Item::first)
+                .reversed() // API returns items in reverse order
                 .thenComparing { a, b ->
                     when {
                         a.third == null && b.third != null -> 1
