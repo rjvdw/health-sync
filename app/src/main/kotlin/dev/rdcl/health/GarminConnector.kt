@@ -20,7 +20,6 @@ import java.io.File
 import java.math.BigDecimal
 import java.time.LocalDate
 
-private val BASE_URL = "https://connect.garmin.com/weight-service"
 private val WEIGHT_CONVERSION_FACTOR = BigDecimal("1000.00")
 private val MIN_DATE = LocalDate.parse("1900-01-01")
 private val MAX_DATE = LocalDate.parse("3000-01-01")
@@ -34,6 +33,10 @@ class GarminConnector {
                 json(JSON)
             }
             defaultRequest {
+                url(
+                    scheme = "https",
+                    host = "connect.garmin.com",
+                )
                 headers {
                     append("DI-Backend", "connectapi.garmin.com")
                     append("Authorization", "Bearer ${getAccessToken()}")
@@ -53,8 +56,12 @@ class GarminConnector {
             val paramEnd = end ?: MAX_DATE
 
             return withContext(Dispatchers.IO) {
-                client.get("$BASE_URL/weight/range/$paramStart/$paramEnd?includeAll=true") {
-                    headers { append("Accept", "application/json") }
+                client.get {
+                    url {
+                        appendPathSegments("weight-service/weight/range/$paramStart/$paramEnd")
+                        parameters.append("includeAll", "true")
+                    }
+                    accept(ContentType.Application.Json)
                 }
                     .body<GetResponse>()
                     .dailyWeightSummaries
@@ -72,7 +79,10 @@ class GarminConnector {
             println("Saving record: $record")
             val requestBody = SaveRequest(record.date, record.weight!!)
             withContext(Dispatchers.IO) {
-                client.post("$BASE_URL/user-weight") {
+                client.post {
+                    url {
+                        appendPathSegments("weight-service/user-weight")
+                    }
                     contentType(ContentType.Application.Json.withCharset(Charsets.UTF_8))
                     setBody(JSON.encodeToString(requestBody))
                 }
@@ -84,7 +94,7 @@ class GarminConnector {
 private fun getAccessToken(): String {
     val garthOauth2Path = getEnv("GARTH_OAUTH2_PATH") ?: ".garth/session/oauth2_token.json"
     val data = File(garthOauth2Path).readText()
-    val token = JSON.decodeFromString<Oauth2Token>(data)
+    val token: Oauth2Token = JSON.decodeFromString(data)
 
     return token.accessToken
 }
